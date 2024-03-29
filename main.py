@@ -1,21 +1,67 @@
-import numpy as np
-from sklearn.linear_model import LinearRegression
+from typing import Optional
 
-# Sample dataset (replace with your own dataset)
-# Assume X represents the independent variable and y represents the dependent variable
-# X = np.array([[1], [2], [3], [4], [5]])  # First variable
-X = np.array([0.80, 0.85, -0.79, 0.98, 8])  # First variable
-y = np.array([2.30, 2.40, 6.16, 2.78, 3.0])  # Second variable
+from google.api_core.client_options import ClientOptions
+from google.cloud import documentai  # type: ignore
 
-X = X.reshape(-1, 1)
+# TODO(developer): Uncomment these variables before running the sample.
+# project_id = "YOUR_PROJECT_ID"
+# location = "YOUR_PROCESSOR_LOCATION" # Format is "us" or "eu"
+# processor_id = "YOUR_PROCESSOR_ID" # Create processor before running sample
+# file_path = "/path/to/local/pdf"
+# mime_type = "application/pdf" # Refer to https://cloud.google.com/document-ai/docs/file-types for supported file types
+# field_mask = "text,entities,pages.pageNumber"  # Optional. The fields to return in the Document object.
+# processor_version_id = "YOUR_PROCESSOR_VERSION_ID" # Optional. Processor version to use
 
 
-# Create and train the linear regression model
-model = LinearRegression()
-model.fit(X, y)
+def process_document_sample(
+    project_id: str,
+    location: str,
+    processor_id: str,
+    file_path: str,
+    mime_type: str,
+    field_mask: Optional[str] = None,
+    processor_version_id: Optional[str] = None,
+) -> None:
+    # You must set the `api_endpoint` if you use a location other than "us".
+    opts = ClientOptions(api_endpoint=f"{location}-documentai.googleapis.com")
 
-# Predict the second variable for a new value of the first variable
-new_X = np.array([[0.69]])  # New value of the first variable
-predicted_y = model.predict(new_X)
+    client = documentai.DocumentProcessorServiceClient(client_options=opts)
 
-print("Predicted value of the second variable:", predicted_y[0])
+    if processor_version_id:
+        # The full resource name of the processor version, e.g.:
+        # `projects/{project_id}/locations/{location}/processors/{processor_id}/processorVersions/{processor_version_id}`
+        name = client.processor_version_path(
+            project_id, location, processor_id, processor_version_id
+        )
+    else:
+        # The full resource name of the processor, e.g.:
+        # `projects/{project_id}/locations/{location}/processors/{processor_id}`
+        name = client.processor_path(project_id, location, processor_id)
+
+    # Read the file into memory
+    with open(file_path, "rb") as image:
+        image_content = image.read()
+
+    # Load binary data
+    raw_document = documentai.RawDocument(content=image_content, mime_type=mime_type)
+
+    # Configure the process request
+    request = documentai.ProcessRequest(
+        name=name,
+        raw_document=raw_document,
+        field_mask=field_mask,
+        # process_options=process_options,
+    )
+
+    result = client.process_document(request=request)
+
+    # For a full list of `Document` object attributes, reference this page:
+    # https://cloud.google.com/document-ai/docs/reference/rest/v1/Document
+    document = result.document
+
+    # Read the text recognition output from the processor
+    print("The document contains the following text:")
+    print(document.text)
+
+# calling the functions
+process_document_sample(project_id="project_id",location="location",processor_id="processor_id",file_path="filepath",mime_type="application/pdf")
