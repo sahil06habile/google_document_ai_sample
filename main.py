@@ -63,5 +63,5 @@ def process_document_sample(
     print("The document contains the following text:")
     print(document.text)
 
-# calling the functions
+# calling the function
 process_document_sample(project_id="project_id",location="location",processor_id="processor_id",file_path="filepath",mime_type="application/pdf")
